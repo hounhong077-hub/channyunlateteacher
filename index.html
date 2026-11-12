@@ -7,85 +7,50 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
         body {
             font-family: 'Khmer OS Content', 'Battambang', 'Segoe UI', Tahoma, sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             color: #333; display: flex; justify-content: center; align-items: center;
             min-height: 100vh; padding: 15px;
         }
-
         .card {
             background: #ffffff; padding: 20px; border-radius: 16px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); width: 100%; max-width: 380px; text-align: center;
         }
-        
-        .school-logo {
-            max-width: 90px;
-            max-height: 90px;
-            object-fit: contain;
-            margin-bottom: 10px;
-            display: inline-block;
-        }
-
+        .school-logo { max-width: 90px; max-height: 90px; object-fit: contain; margin-bottom: 10px; display: inline-block; }
         h2 { font-size: 18px; color: #1a1a1a; margin-bottom: 5px; }
         p { font-size: 12px; color: #666; margin-bottom: 15px; line-height: 1.4; }
-
         .upload-box { margin-bottom: 15px; text-align: left; }
-        
-        label { 
-            font-family: inherit; 
-            font-size: 12px; font-weight: 600; color: #444; display: block; margin-bottom: 4px; 
-        }
-        
+        label { font-family: inherit; font-size: 12px; font-weight: 600; color: #444; display: block; margin-bottom: 4px; }
         input[type="file"] {
-            font-family: inherit; 
-            width: 100%; padding: 8px; font-size: 12px; border: 1px dashed #2481cc;
+            font-family: inherit; width: 100%; padding: 8px; font-size: 12px; border: 1px dashed #2481cc;
             border-radius: 8px; background: #f8fbff; cursor: pointer;
         }
-
-        #preview { 
-            width: 100%; 
-            max-height: 160px; 
-            object-fit: cover; 
-            border-radius: 8px; 
-            margin-top: 8px; 
-            display: none; 
-        }
-        
+        #preview { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-top: 8px; display: none; }
         button {
-            font-family: inherit; 
-            background-color: #2481cc; color: white; border: none; padding: 12px 20px;
+            font-family: inherit; background-color: #2481cc; color: white; border: none; padding: 12px 20px;
             font-size: 15px; font-weight: 600; border-radius: 10px; cursor: pointer; width: 100%;
             transition: background 0.3s ease; box-shadow: 0 4px 12px rgba(36, 129, 204, 0.3);
         }
-        
         button:hover { background-color: #1d6fa5; }
         button:disabled { background-color: #ccc; cursor: not-allowed; box-shadow: none; }
-        
-        #status { 
-            font-family: inherit; 
-            margin-top: 10px; font-size: 12px; font-weight: 500; min-height: 30px; color: #555; 
-        }
+        #status { font-family: inherit; margin-top: 10px; font-size: 12px; font-weight: 500; min-height: 30px; color: #555; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <!-- Logo សាលា -->
         <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjR9cK7_BjbUQ4THtiR6iLjRdc3TN7o8kTPD7k91b70ixGvhTAdEYFVOnoN1TlSB2LZEX_PNoBOKDOyYtg94vVlATxh7jpWk6ngIY45Ym4S7RzwvnrEyWDDeGX5DkDqfIDCqmXcOEqjZ0x-9xaWyLZ3XOGWeb-I7mc7s93BDsynlqGNuEBRVY0zfg6akWg/s1111/CYIS%20Png.png" alt="សាលាអន្តរជាតិ ចាន់ យុន" class="school-logo">
         
         <h2>ការស្នើសុំមកធ្វើការយឺត</h2>
         <p>រូបថតនិងព័ត៌មានអំពីការមកយឺត</p>
 
-        <!-- ប្រអប់ Upload រូបភាព -->
         <div class="upload-box">
             <label for="imageInput">📸 ថតរូបភាព ឬជ្រើសរើស:</label>
             <input type="file" id="imageInput" accept="image/*" capture="environment" onchange="previewImage(event)">
             <img id="preview" alt="Image Preview">
         </div>
 
-        <!-- ប៊ូតុងផ្ញើរ -->
         <button id="locBtn" onclick="getLocationAndSend()">ផ្ញើរ</button>
         <div id="status"></div>
     </div>
@@ -96,7 +61,6 @@
 
         let base64Image = "";
 
-        // មុខងារបង្ហាញរូបភាពឧទាហរណ៍ និងកាត់បន្ថយទំហំ
         function previewImage(event) {
             const file = event.target.files[0];
             if (file) {
@@ -132,8 +96,8 @@
             };
         }
 
-        // មុខងារចាប់យកទីតាំង និងផ្ញើទៅ Google Sheets
-        function getLocationAndSend() {
+        // ប្រើ async ដើម្បីរង់ចាំការ Upload រូបភាពសិន
+        async function getLocationAndSend() {
             let status = document.getElementById("status");
             let btn = document.getElementById("locBtn");
 
@@ -142,47 +106,70 @@
                 return;
             }
 
-            status.innerHTML = "⏳ កំពុងផ្ទៀងផ្ទាត់ទីតាំង និងរក្សាទុក...";
+            status.innerHTML = "⏳ កំពុងផ្ទៀងផ្ទាត់ និងរៀបចំទិន្នន័យ...";
             btn.disabled = true;
             btn.style.opacity = "0.7";
 
-            let tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : { id: "unknown", first_name: "WebUser", username: "" };
-
             navigator.geolocation.getCurrentPosition(
-                (position) => {
+                async (position) => {
                     let lat = position.coords.latitude;
                     let lon = position.coords.longitude;
+                    let imageUrl = "";
 
+                    // ១. បើមានរូបភាព សូម Upload ទៅ Catbox ដើម្បីយក Link
+                    if (base64Image) {
+                        status.innerHTML = "⏳ កំពុង Upload រូបភាព...";
+                        try {
+                            const res = await fetch(base64Image);
+                            const blob = await res.blob();
+                            let formData = new FormData();
+                            formData.append('reqtype', 'fileupload');
+                            formData.append('fileToUpload', blob, 'photo.jpg');
+                            
+                            const uploadRes = await fetch('https://catbox.moe/user/api.php', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            imageUrl = await uploadRes.text(); 
+                        } catch (err) {
+                            console.error("Upload failed", err);
+                        }
+                    }
+
+                    // ២. ផ្ញើទិន្នន័យទៅកាន់ Telegram Bot (ដើម្បីឱ្យ Bot ផ្ញើទៅក្រុម)
+                    const botPayload = {
+                        latitude: lat,
+                        longitude: lon,
+                        imageUrl: imageUrl
+                    };
+                    tg.sendData(JSON.stringify(botPayload));
+
+                    // ៣. ផ្ញើទិន្នន័យទៅកាន់ Google Sheets ដដែល (បើអ្នកចង់រក្សាទុក)
                     const scriptURL = 'https://script.google.com/macros/s/AKfycbwws0L_NFAZiz3FbVPM75NTH6lDRCPDEQ9hm3t9tyQaqLh-Gm7uHkiCsAzt_YQuRxzu/exec';
-
-                    const payload = {
+                    let tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : { id: "unknown", first_name: "WebUser" };
+                    
+                    const sheetPayload = {
                         userId: tgUser.id,
                         fullName: `${tgUser.first_name} ${tgUser.last_name || ''}`,
                         username: tgUser.username ? `@${tgUser.username}` : 'គ្មាន',
                         latitude: lat,
                         longitude: lon,
                         mapsUrl: `https://www.google.com/maps?q=${lat},${lon}`,
-                        imageUrl: base64Image ? "មានរូបភាព" : "គ្មានរូបភាព" 
+                        imageUrl: imageUrl || "គ្មានរូបភាព"
                     };
 
                     fetch(scriptURL, {
                         method: 'POST',
                         mode: 'no-cors',
-                        cache: 'no-cache',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    })
-                    .then(response => {
-                        status.innerHTML = `✅ រក្សាទុកជោគជ័យ!`;
-                        setTimeout(() => {
-                            tg.close();
-                        }, 2000);
-                    })
-                    .catch(error => {
-                        btn.disabled = false;
-                        btn.style.opacity = "1";
-                        status.innerHTML = "❌ មានបញ្ហា៖ " + error;
+                        body: JSON.stringify(sheetPayload)
                     });
+
+                    // ៤. បង្ហាញថាជោគជ័យ រួចបិទ Web App
+                    status.innerHTML = `✅ ផ្ញើរបាយការណ៍ជោគជ័យ!`;
+                    setTimeout(() => {
+                        tg.close();
+                    }, 2000);
                 },
                 (error) => {
                     btn.disabled = false;
