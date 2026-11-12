@@ -3,9 +3,10 @@ const { Telegraf } = require('telegraf');
 const botToken = process.env.BOT_TOKEN || '8760309681:AAFmRRMqDFzl4mA_oM5s_oEI5e5HcK458WU';
 const bot = new Telegraf(botToken);
 
-// ID ក្រុមរបស់អ្នក
+// ID ក្រុមធំរបស់អ្នក
 const groupChatId = '-5514831424'; 
-const webAppUrl = 'https://your-domain.com/index.html'; // ត្រូវប្តូរទៅ URL ពិតរបស់អ្នក!
+// ដាក់ Link GitHub Pages (index.html) របស់អ្នកនៅទីនេះ
+const webAppUrl = 'https://your-domain.com/index.html'; 
 
 bot.telegram.setMyCommands([
     { command: 'checkin', description: 'សុំមកយឺត (ផ្ញើទីតាំង និងរូបថត)' }
@@ -44,41 +45,39 @@ bot.on('new_chat_members', (ctx) => {
     }
 });
 
-// ទទួលទិន្នន័យពី Web App
 bot.on('web_app_data', async (ctx) => {
-    console.log("ទទួលបានទិន្នន័យពី Web App:", ctx.webApp.data);
-    
     try {
-        const userId = ctx.from.id;
-        const fullName = `${ctx.from.first_name} ${ctx.from.last_name || ''}`.trim();
-        const username = ctx.from.username ? `@${ctx.from.username}` : 'គ្មាន Username';
-        
-        // យើងទាញយកទិន្នន័យ Lat/Lon ដែលបានផ្ញើមក
         const data = JSON.parse(ctx.webApp.data);
-        const lat = data.lat;
-        const lon = data.lon;
+        const lat = data.latitude;
+        const lon = data.longitude;
+        const imageUrl = data.imageUrl;
+        const fullName = data.fullName;
+        const username = data.username;
+        const userId = data.userId;
+        const mapUrl = data.mapUrl;
 
-        // ចំណាំ៖ ដោយសារយើងបញ្ជូនរូបភាពទៅ Google Sheets រួចហើយ 
-        // យើងគ្រាន់តែផ្ញើ Location និងសារជូនដំណឹងទៅក្រុម
-        // ប្រសិនបើអ្នកចង់បានរូបភាព អ្នកអាចទាញយក Link ពី Google Sheets មកផ្ញើនៅទីនេះ
-        
-        const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
         const captionText = `📝 **របាយការណ៍មកធ្វើការយឺត:**\n` +
                             `- ឈ្មោះ: ${fullName} (${username})\n` +
                             `- ID: \`${userId}\`\n` +
-                            `- 🗺 [ចុចទីនេះដើម្បីមើលផែនទី Google Maps](${googleMapsUrl})`;
+                            `- 🗺 [ចុចទីនេះដើម្បីមើលផែនទី Google Maps](${mapUrl})`;
 
         // ១. ផ្ញើទីតាំង (Location) ទៅក្រុម
         await bot.telegram.sendLocation(groupChatId, lat, lon);
 
-        // ២. ផ្ញើសារអត្ថបទទៅក្រុម
-        await bot.telegram.sendMessage(groupChatId, captionText, { parse_mode: 'Markdown' });
+        // ២. ផ្ញើរូបភាព និងអត្ថបទទៅក្រុម
+        if (imageUrl && imageUrl.startsWith('https://')) {
+            await bot.telegram.sendPhoto(groupChatId, imageUrl, {
+                caption: captionText,
+                parse_mode: 'Markdown'
+            });
+        } else {
+            await bot.telegram.sendMessage(groupChatId, captionText, { parse_mode: 'Markdown' });
+        }
 
-        // ឆ្លើយតបទៅកាន់អ្នកប្រើប្រាស់វិញ
         ctx.reply('✅ បញ្ជូនរបាយការណ៍ និងទីតាំងទៅកាន់ក្រុមជោគជ័យហើយ!');
 
     } catch (e) {
-        console.error("Error in web_app_data:", e);
+        console.error(e);
         ctx.reply('❌ មានបញ្ហាខុសឆ្គងក្នុងការបញ្ជូនទិន្នន័យ។');
     }
 });
