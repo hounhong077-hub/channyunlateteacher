@@ -1,87 +1,187 @@
-const { Telegraf } = require('telegraf');
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYIS - ការស្នើសុំមកធ្វើការយឺត</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Khmer OS Content', 'Battambang', 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333; display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; padding: 15px;
+        }
+        .card {
+            background: #ffffff; padding: 20px; border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); width: 100%; max-width: 380px; text-align: center;
+        }
+        .school-logo { max-width: 90px; max-height: 90px; object-fit: contain; margin-bottom: 10px; display: inline-block; }
+        h2 { font-size: 18px; color: #1a1a1a; margin-bottom: 5px; }
+        p { font-size: 12px; color: #666; margin-bottom: 15px; line-height: 1.4; }
+        .upload-box { margin-bottom: 15px; text-align: left; }
+        label { font-family: inherit; font-size: 12px; font-weight: 600; color: #444; display: block; margin-bottom: 4px; }
+        input[type="file"] {
+            font-family: inherit; width: 100%; padding: 8px; font-size: 12px; border: 1px dashed #2481cc;
+            border-radius: 8px; background: #f8fbff; cursor: pointer;
+        }
+        #preview { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-top: 8px; display: none; }
+        button {
+            font-family: inherit; background-color: #2481cc; color: white; border: none; padding: 12px 20px;
+            font-size: 15px; font-weight: 600; border-radius: 10px; cursor: pointer; width: 100%;
+            transition: background 0.3s ease; box-shadow: 0 4px 12px rgba(36, 129, 204, 0.3);
+        }
+        button:hover { background-color: #1d6fa5; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; box-shadow: none; }
+        #status { font-family: inherit; margin-top: 10px; font-size: 12px; font-weight: 500; min-height: 30px; color: #555; }
+    </style>
+</head>
+<body>
 
-const botToken = process.env.BOT_TOKEN || '8760309681:AAFmRRMqDFzl4mA_oM5s_oEI5e5HcK458WU';
-const bot = new Telegraf(botToken);
+    <div class="card">
+        <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjR9cK7_BjbUQ4THtiR6iLjRdc3TN7o8kTPD7k91b70ixGvhTAdEYFVOnoN1TlSB2LZEX_PNoBOKDOyYtg94vVlATxh7jpWk6ngIY45Ym4S7RzwvnrEyWDDeGX5DkDqfIDCqmXcOEqjZ0x-9xaWyLZ3XOGWeb-I7mc7s93BDsynlqGNuEBRVY0zfg6akWg/s1111/CYIS%20Png.png" alt="សាលាអន្តរជាតិ ចាន់ យុន" class="school-logo">
+        
+        <h2>ការស្នើសុំមកធ្វើការយឺត</h2>
+        <p>រូបថតនិងព័ត៌មានអំពីការមកយឺត</p>
 
-// ID ក្រុមរបស់អ្នក
-const groupChatId = '-5514831424'; 
-const webAppUrl = 'https://your-domain.com/index.html'; // ត្រូវប្តូរទៅ URL ពិតរបស់អ្នក!
+        <div class="upload-box">
+            <label for="imageInput">📸 ថតរូបភាព ឬជ្រើសរើស:</label>
+            <input type="file" id="imageInput" accept="image/*" capture="environment" onchange="previewImage(event)">
+            <img id="preview" alt="Image Preview">
+        </div>
 
-bot.telegram.setMyCommands([
-    { command: 'checkin', description: 'សុំមកយឺត (ផ្ញើទីតាំង និងរូបថត)' }
-]).catch(console.error);
+        <button id="locBtn" onclick="getLocationAndSend()">ផ្ញើរ</button>
+        <div id="status"></div>
+    </div>
 
-bot.command('checkin', (ctx) => {
-    const userName = ctx.from.first_name;
-    ctx.reply(
-        `សួស្តី ${userName}! សូមចុចប៊ូតុងខាងក្រោមដើម្បីផ្ញើរបាយការណ៍មកយឺត៖`,
-        {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: '📝 សុំមកយឺត', web_app: { url: webAppUrl } }]
-                ]
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+
+        let base64Image = "";
+
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    compressImage(e.target.result, 600, 0.7, (compressedBase64) => {
+                        base64Image = compressedBase64;
+                        let preview = document.getElementById("preview");
+                        preview.src = compressedBase64;
+                        preview.style.display = "block";
+                    });
+                };
+                reader.readAsDataURL(file);
             }
         }
-    );
-});
 
-bot.on('new_chat_members', (ctx) => {
-    const botId = ctx.botInfo.id;
-    const newMembers = ctx.message.new_chat_members;
-    const botWasAdded = newMembers.some(member => member.id === botId);
-
-    if (botWasAdded) {
-        ctx.reply(
-            `សួស្តីបងប្អូនទាំងអស់គ្នា! 👋\nខ្ញុំគឺជា Bot សម្រាប់ជួយសម្រួលក្នុងការស្នើសុំមកធ្វើការយឺត។\nសូមវាយពាក្យ /checkin ឬចុចប៊ូតុងខាងក្រោមដើម្បីចាប់ផ្តើម៖`,
-            {
-                reply_markup: {
-                    inline_keyboard: [
-                        [{ text: '📝 សុំមកយឺត', web_app: { url: webAppUrl } }]
-                    ]
+        function compressImage(dataUrl, maxWidth, quality, callback) {
+            const img = new Image();
+            img.src = dataUrl;
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
                 }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                callback(canvas.toDataURL('image/jpeg', quality));
+            };
+        }
+
+        async function getLocationAndSend() {
+            let status = document.getElementById("status");
+            let btn = document.getElementById("locBtn");
+
+            if (!navigator.geolocation) {
+                status.innerHTML = "❌ Browser របស់អ្នកមិនគាំទ្រការចាប់យកទីតាំងទេ។";
+                return;
             }
-        );
-    }
-});
 
-// ទទួលទិន្នន័យពី Web App
-bot.on('web_app_data', async (ctx) => {
-    console.log("ទទួលបានទិន្នន័យពី Web App:", ctx.webApp.data);
-    
-    try {
-        const userId = ctx.from.id;
-        const fullName = `${ctx.from.first_name} ${ctx.from.last_name || ''}`.trim();
-        const username = ctx.from.username ? `@${ctx.from.username}` : 'គ្មាន Username';
-        
-        // យើងទាញយកទិន្នន័យ Lat/Lon ដែលបានផ្ញើមក
-        const data = JSON.parse(ctx.webApp.data);
-        const lat = data.lat;
-        const lon = data.lon;
+            status.innerHTML = "⏳ កំពុងផ្ទៀងផ្ទាត់ និងរៀបចំទិន្នន័យ...";
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
 
-        // ចំណាំ៖ ដោយសារយើងបញ្ជូនរូបភាពទៅ Google Sheets រួចហើយ 
-        // យើងគ្រាន់តែផ្ញើ Location និងសារជូនដំណឹងទៅក្រុម
-        // ប្រសិនបើអ្នកចង់បានរូបភាព អ្នកអាចទាញយក Link ពី Google Sheets មកផ្ញើនៅទីនេះ
-        
-        const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
-        const captionText = `📝 **របាយការណ៍មកធ្វើការយឺត:**\n` +
-                            `- ឈ្មោះ: ${fullName} (${username})\n` +
-                            `- ID: \`${userId}\`\n` +
-                            `- 🗺 [ចុចទីនេះដើម្បីមើលផែនទី Google Maps](${googleMapsUrl})`;
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    let lat = position.coords.latitude;
+                    let lon = position.coords.longitude;
+                    let imageUrl = "គ្មានរូបភាព";
 
-        // ១. ផ្ញើទីតាំង (Location) ទៅក្រុម
-        await bot.telegram.sendLocation(groupChatId, lat, lon);
+                    // ១. បើមានរូបភាព សូម Upload ទៅ Catbox ដើម្បីយក Link
+                    if (base64Image) {
+                        status.innerHTML = "⏳ កំពុង Upload រូបភាព...";
+                        try {
+                            const res = await fetch(base64Image);
+                            const blob = await res.blob();
+                            let formData = new FormData();
+                            formData.append('reqtype', 'fileupload');
+                            formData.append('fileToUpload', blob, 'photo.jpg');
+                            
+                            const uploadRes = await fetch('https://catbox.moe/user/api.php', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            imageUrl = await uploadRes.text(); 
+                        } catch (err) {
+                            console.error("Upload failed", err);
+                            imageUrl = "រូបភាពដាក់មិនចូល";
+                        }
+                    }
 
-        // ២. ផ្ញើសារអត្ថបទទៅក្រុម
-        await bot.telegram.sendMessage(groupChatId, captionText, { parse_mode: 'Markdown' });
+                    // ២. ផ្ញើទៅ Google Sheets មុន (ដើម្បីរក្សាទុកទិន្នន័យ)
+                    status.innerHTML = "⏳ កំពុងរក្សាទុកទិន្នន័យ...";
+                    const scriptURL = 'https://script.google.com/macros/s/AKfycbwws0L_NFAZiz3FbVPM75NTH6lDRCPDEQ9hm3t9tyQaqLh-Gm7uHkiCsAzt_YQuRxzu/exec';
+                    let tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : { id: "unknown", first_name: "WebUser" };
+                    
+                    const sheetPayload = {
+                        userId: tgUser.id,
+                        fullName: `${tgUser.first_name} ${tgUser.last_name || ''}`,
+                        username: tgUser.username ? `@${tgUser.username}` : 'គ្មាន',
+                        latitude: lat,
+                        longitude: lon,
+                        mapsUrl: `https://www.google.com/maps?q=${lat},${lon}`,
+                        imageUrl: imageUrl
+                    };
 
-        // ឆ្លើយតបទៅកាន់អ្នកប្រើប្រាស់វិញ
-        ctx.reply('✅ បញ្ជូនរបាយការណ៍ និងទីតាំងទៅកាន់ក្រុមជោគជ័យហើយ!');
+                    try {
+                        await fetch(scriptURL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(sheetPayload)
+                        });
+                    } catch (err) {
+                        console.log("Sheets error", err);
+                    }
 
-    } catch (e) {
-        console.error("Error in web_app_data:", e);
-        ctx.reply('❌ មានបញ្ហាខុសឆ្គងក្នុងការបញ្ជូនទិន្នន័យ។');
-    }
-});
+                    // ៣. បញ្ជូនទិន្នន័យតូចមួយទៅ Bot (ប្រាប់ថាបានបញ្ចប់)
+                    // យើងមិនបញ្ជូនរូបភាពតាមនេះទេ ព្រោះវាធំពេក យើងបញ្ជូនតែព័ត៌មានបញ្ជាក់
+                    tg.sendData(JSON.stringify({ 
+                        status: "success",
+                        lat: lat,
+                        lon: lon
+                    }));
 
-bot.launch();
-console.log('Telegram Bot is running successfully...');
+                    status.innerHTML = `✅ ផ្ញើរបាយការណ៍ជោគជ័យ!`;
+                    // មិនត្រូវហៅ tg.close() ទេ ព្រោះ tg.sendData() បិទវាដោយខ្លួនឯងហើយ
+                },
+                (error) => {
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                    status.innerHTML = "❌ មិនអាចទាញយកទីតាំងបានទេ៖ " + error.message;
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+    </script>
+
+</body>
+</html>
