@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CYIS - ការស្នើសុំមកធ្វើការយឺត</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Leaflet CSS សម្រាប់បង្ហាញផែនទី -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
         body {
-            /* កំណត់ Font សម្រាប់ទំព័រទាំងមូល */
             font-family: 'Khmer OS Content', 'Battambang', 'Segoe UI', Tahoma, sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             color: #333; display: flex; justify-content: center; align-items: center;
@@ -32,34 +29,32 @@
         }
 
         h2 { font-size: 18px; color: #1a1a1a; margin-bottom: 5px; }
-        p { font-size: 12px; color: #666; margin-bottom: 12px; line-height: 1.4; }
-        
-        #map {
-            width: 100%;
-            height: 160px;
-            border-radius: 10px;
-            margin-bottom: 12px;
-            border: 1px solid #ddd;
-            display: none;
-        }
+        p { font-size: 12px; color: #666; margin-bottom: 15px; line-height: 1.4; }
 
-        .upload-box { margin-bottom: 12px; text-align: left; }
+        .upload-box { margin-bottom: 15px; text-align: left; }
         
         label { 
-            font-family: inherit; /* ទាញយក Font ពី Body */
+            font-family: inherit; 
             font-size: 12px; font-weight: 600; color: #444; display: block; margin-bottom: 4px; 
         }
         
         input[type="file"] {
-            font-family: inherit; /* ទាញយក Font ពី Body */
+            font-family: inherit; 
             width: 100%; padding: 8px; font-size: 12px; border: 1px dashed #2481cc;
             border-radius: 8px; background: #f8fbff; cursor: pointer;
         }
 
-        #preview { width: 100%; max-height: 120px; object-fit: cover; border-radius: 8px; margin-top: 8px; display: none; }
+        #preview { 
+            width: 100%; 
+            max-height: 160px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+            margin-top: 8px; 
+            display: none; 
+        }
         
         button {
-            font-family: inherit; /* បន្ថែមបន្ទាត់នេះ ដើម្បីឱ្យប៊ូតុងប្រើ Khmer OS Content */
+            font-family: inherit; 
             background-color: #2481cc; color: white; border: none; padding: 12px 20px;
             font-size: 15px; font-weight: 600; border-radius: 10px; cursor: pointer; width: 100%;
             transition: background 0.3s ease; box-shadow: 0 4px 12px rgba(36, 129, 204, 0.3);
@@ -82,9 +77,6 @@
         
         <h2>ការស្នើសុំមកធ្វើការយឺត</h2>
         <p>រូបថតនិងព័ត៌មានអំពីការមកយឺត</p>
-        
-        <!-- ប្រអប់បង្ហាញផែនទី និង Pin ទីតាំង -->
-        <div id="map"></div>
 
         <!-- ប្រអប់ Upload រូបភាព -->
         <div class="upload-box">
@@ -98,45 +90,13 @@
         <div id="status"></div>
     </div>
 
-    <!-- Leaflet JS សម្រាប់ដំណើរការផែនទី -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
 
         let base64Image = "";
-        let map, marker;
 
-        window.onload = function() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        let lat = position.coords.latitude;
-                        let lon = position.coords.longitude;
-                        showMap(lat, lon);
-                    },
-                    (error) => { console.log("Waiting for location..."); },
-                    { enableHighAccuracy: true }
-                );
-            }
-        };
-
-        function showMap(lat, lon) {
-            let mapContainer = document.getElementById("map");
-            mapContainer.style.display = "block";
-
-            if (!map) {
-                map = L.map('map').setView([lat, lon], 16);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap contributors'
-                }).addTo(map);
-                marker = L.marker([lat, lon]).addTo(map);
-            } else {
-                map.setView([lat, lon], 16);
-                marker.setLatLng([lat, lon]);
-            }
-        }
-
+        // មុខងារបង្ហាញរូបភាពឧទាហរណ៍ និងកាត់បន្ថយទំហំ
         function previewImage(event) {
             const file = event.target.files[0];
             if (file) {
@@ -172,6 +132,7 @@
             };
         }
 
+        // មុខងារចាប់យកទីតាំង និងផ្ញើទៅ Google Sheets
         function getLocationAndSend() {
             let status = document.getElementById("status");
             let btn = document.getElementById("locBtn");
@@ -191,8 +152,6 @@
                 (position) => {
                     let lat = position.coords.latitude;
                     let lon = position.coords.longitude;
-                    
-                    showMap(lat, lon);
 
                     const scriptURL = 'https://script.google.com/macros/s/AKfycbwws0L_NFAZiz3FbVPM75NTH6lDRCPDEQ9hm3t9tyQaqLh-Gm7uHkiCsAzt_YQuRxzu/exec';
 
