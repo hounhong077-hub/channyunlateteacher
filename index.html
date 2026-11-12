@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYIS - Verify Current Location</title>
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Battambang', 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .card {
+            background: #ffffff;
+            padding: 30px 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+        }
+        .icon {
+            font-size: 45px;
+            margin-bottom: 12px;
+        }
+        h2 {
+            font-size: 20px;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+        p {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .upload-box {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+            display: block;
+            margin-bottom: 6px;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 13px;
+            border: 1px dashed #2481cc;
+            border-radius: 8px;
+            background: #f8fbff;
+            cursor: pointer;
+        }
+        #preview {
+            width: 100%;
+            max-height: 160px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+        button {
+            background-color: #2481cc;
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s ease;
+            box-shadow: 0 4px 12px rgba(36, 129, 204, 0.3);
+        }
+        button:hover {
+            background-color: #1d6fa5;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        #status {
+            margin-top: 15px;
+            font-size: 13px;
+            font-weight: 500;
+            min-height: 35px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="icon">📍</div>
+        <h2>Verify current location</h2>
+        <p>សូមថតរូបភាព ឬជ្រើសរើសរូបភាព រួចចុចប៊ូតុងខាងក្រោមដើម្បីផ្ញើទីតាំងជូន Bot ។</p>
+        
+        <!-- ប្រអប់ថតរូប ឬជ្រើសរើសរូបភាពពីទូរសព្ទ -->
+        <div class="upload-box">
+            <label for="imageInput">📸 ថតរូបភាព ឬជ្រើសរើស:</label>
+            <input type="file" id="imageInput" accept="image/*" capture="environment" onchange="previewImage(event)">
+            <img id="preview" alt="Image Preview">
+        </div>
+
+        <button id="locBtn" onclick="getLocationAndSend()">Send My Location</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // ពង្រីកទំហំ Web App ឱ្យពេញអេក្រង់
+
+        let base64Image = "";
+
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    compressImage(e.target.result, 600, 0.7, (compressedBase64) => {
+                        base64Image = compressedBase64;
+                        let preview = document.getElementById("preview");
+                        preview.src = compressedBase64;
+                        preview.style.display = "block";
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // បង្រួមទំហំរូបភាពកុំឱ្យធំពេកមុននឹងផ្ញើ
+        function compressImage(dataUrl, maxWidth, quality, callback) {
+            const img = new Image();
+            img.src = dataUrl;
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                callback(canvas.toDataURL('image/jpeg', quality));
+            };
+        }
+
+        function getLocationAndSend() {
+            let status = document.getElementById("status");
+            let btn = document.getElementById("locBtn");
+
+            if (!navigator.geolocation) {
+                status.innerHTML = "❌ Browser របស់អ្នកមិនគាំទ្រការចាប់យកទីតាំងទេ។";
+                return;
+            }
+
+            status.innerHTML = "⏳ កំពុងទាញយកទីតាំង GPS...";
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    let lat = position.coords.latitude;
+                    let lon = position.coords.longitude;
+                    
+                    status.innerHTML = `✅ Get a successful position!<br><small>Lat: ${lat.toFixed(5)}, Lon: ${lon.toFixed(5)}</small>`;
+                    
+                    const payload = JSON.stringify({
+                        latitude: lat,
+                        longitude: lon,
+                        image: base64Image
+                    });
+
+                    // ផ្ញើទិន្នន័យត្រឡប់ទៅ Telegram Bot
+                    setTimeout(() => {
+                        tg.sendData(payload);
+                    }, 800);
+                },
+                (error) => {
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                    status.innerHTML = "❌ មិនអាចទាញយកទីតាំងបានទេ៖ " + error.message;
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+    </script>
+
+</body>
+</html>
