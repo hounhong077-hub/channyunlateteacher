@@ -2,53 +2,40 @@ const { Telegraf } = require('telegraf');
 
 const botToken = process.env.BOT_TOKEN || '8760309681:AAFmRRMqDFzl4mA_oM5s_oEI5e5HcK458WU';
 const bot = new Telegraf(botToken);
-const adminChatId = '-5514831424'; 
+
+// ID ក្រុមរបស់អ្នក (ត្រូវប្រាកដថា Bot ស្ថិតនៅក្នុងក្រុមនេះ)
+const groupChatId = '-5514831424'; 
 const webAppUrl = 'https://your-domain.com/index.html'; // សូមប្តូរទៅ URL ពិតរបស់អ្នក
 
-// 1. កំណត់ Menu ពាក្យបញ្ជា (បង្ហាញប្រអប់ / នៅពេលវាយ)
+// កំណត់ Menu ពាក្យបញ្ជា
 bot.telegram.setMyCommands([
-    { command: 'checkin', description: 'សុំមកយឺត (ផ្ញើទីតាំង និងរូបថត)' },
-    { command: 'start', description: 'ចាប់ផ្តើមប្រើប្រាស់ Bot' }
-]).then(() => {
-    console.log('Command menu has been set successfully.');
-}).catch((err) => {
-    console.error('Error setting commands:', err);
-});
+    { command: 'checkin', description: 'សុំមកយឺត (ផ្ញើទីតាំង និងរូបថត)' }
+]).catch(console.error);
 
-// 2. ពាក្យបញ្ជា /checkin សម្រាប់បើក Web App
+// ពាក្យបញ្ជា /checkin
 bot.command('checkin', (ctx) => {
     const userName = ctx.from.first_name;
-    
     ctx.reply(
         `សួស្តី ${userName}! សូមចុចប៊ូតុងខាងក្រោមដើម្បីផ្ញើរបាយការណ៍មកយឺត៖`,
         {
             reply_markup: {
                 inline_keyboard: [
-                    [
-                        { 
-                            text: '📝 សុំមកយឺត', 
-                            web_app: { url: webAppUrl } 
-                        }
-                    ]
+                    [{ text: '📝 សុំមកយឺត', web_app: { url: webAppUrl } }]
                 ]
             }
         }
     );
 });
 
-// 3. ផ្ញើសារស្វាគមន៍នៅពេល Bot ត្រូវបាន Add ចូលក្រុម
+// ពេល Bot ត្រូវ Add ចូលក្រុម
 bot.on('new_chat_members', (ctx) => {
     const botId = ctx.botInfo.id;
     const newMembers = ctx.message.new_chat_members;
-    
-    // ពិនិត្យមើលថាតើអ្នកដែលទើបចូលថ្មីនោះ គឺជា Bot នេះឬអត់
     const botWasAdded = newMembers.some(member => member.id === botId);
 
     if (botWasAdded) {
         ctx.reply(
-            `សួស្តីបងប្អូនទាំងអស់គ្នា! 👋\n\n` +
-            `ខ្ញុំគឺជា Bot សម្រាប់ជួយសម្រួលក្នុងការស្នើសុំមកធ្វើការយឺត។\n` +
-            `សូមវាយពាក្យ /checkin ឬចុចប៊ូតុងខាងក្រោមដើម្បីចាប់ផ្តើម៖`,
+            `សួស្តីបងប្អូនទាំងអស់គ្នា! 👋\nខ្ញុំគឺជា Bot សម្រាប់ជួយសម្រួលក្នុងការស្នើសុំមកធ្វើការយឺត។\nសូមវាយពាក្យ /checkin ឬចុចប៊ូតុងខាងក្រោមដើម្បីចាប់ផ្តើម៖`,
             {
                 reply_markup: {
                     inline_keyboard: [
@@ -60,7 +47,7 @@ bot.on('new_chat_members', (ctx) => {
     }
 });
 
-// ទទួលទិន្នន័យពី Web App (ប្រសិនបើអ្នកប្រើ tg.sendData ក្នុង HTML)
+// ទទួលទិន្នន័យពី Web App ហើយផ្ញើទៅក្រុម
 bot.on('web_app_data', async (ctx) => {
     try {
         const userId = ctx.from.id;
@@ -70,34 +57,30 @@ bot.on('web_app_data', async (ctx) => {
         const data = JSON.parse(ctx.webApp.data);
         const lat = data.latitude;
         const lon = data.longitude;
-        const imageBase64 = data.image;
+        const imageUrl = data.imageUrl; // ទទួលបាន Link រូបភាពពី Catbox
 
         const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+        const captionText = `📝 **របាយការណ៍មកធ្វើការយឺត:**\n` +
+                            `- ឈ្មោះ: ${fullName} (${username})\n` +
+                            `- ID: \`${userId}\`\n` +
+                            `- 🗺 [ចុចទីនេះដើម្បីមើលផែនទី Google Maps](${googleMapsUrl})`;
 
-        if (imageBase64 && imageBase64.startsWith('data:image')) {
-            const base64Data = imageBase64.replace(/^data:image\/jpeg;base64,/, "");
-            const imageBuffer = Buffer.from(base64Data, 'base64');
+        // ១. ផ្ញើទីតាំង (Location) ទៅក្រុម
+        await bot.telegram.sendLocation(groupChatId, lat, lon);
 
-            await bot.telegram.sendPhoto(adminChatId, { source: imageBuffer }, {
-                caption: `📝 **របាយការណ៍មកធ្វើការយឺត:**\n` +
-                         `- ឈ្មោះ: ${fullName} (${username})\n` +
-                         `- ID: \`${userId}\`\n` +
-                         `- កូអរដោនេ: Lat: ${lat.toFixed(5)}, Lon: ${lon.toFixed(5)}\n` +
-                         `- 🗺 [ចុចទីនេះដើម្បីមើលផែនទី Google Maps](${googleMapsUrl})`,
-                        parse_mode: 'Markdown'
+        // ២. ផ្ញើរូបភាព និងអត្ថបទទៅក្រុម (បើមានរូបភាព)
+        if (imageUrl && imageUrl.startsWith('https://')) {
+            await bot.telegram.sendPhoto(groupChatId, imageUrl, {
+                caption: captionText,
+                parse_mode: 'Markdown'
             });
         } else {
-            await bot.telegram.sendMessage(adminChatId, 
-                `📝 **របាយការណ៍មកធ្វើការយឺត (គ្មានរូបភាព):**\n` +
-                `- ឈ្មោះ: ${fullName} (${username})\n` +
-                `- ID: \`${userId}\`\n` +
-                `- កូអរដោនេ: Lat: ${lat.toFixed(5)}, Lon: ${lon.toFixed(5)}\n` +
-                `- 🗺 [ចុចទីនេះដើម្បីមើលផែនទី Google Maps](${googleMapsUrl})`,
-                { parse_mode: 'Markdown' }
-            );
+            // បើគ្មានរូបភាព ផ្ញើតែអត្ថបទ
+            await bot.telegram.sendMessage(groupChatId, captionText, { parse_mode: 'Markdown' });
         }
 
-        ctx.reply('✅ បញ្ជូនរបាយការណ៍ទៅកាន់ Admin ជោគជ័យហើយ!');
+        // ឆ្លើយតបទៅកាន់អ្នកប្រើប្រាស់វិញ
+        ctx.reply('✅ បញ្ជូនរបាយការណ៍ និងទីតាំងទៅកាន់ក្រុមជោគជ័យហើយ!');
 
     } catch (e) {
         console.error(e);
@@ -106,4 +89,4 @@ bot.on('web_app_data', async (ctx) => {
 });
 
 bot.launch();
-console.log('Telegram Bot (CYIS Late Request) is running successfully...');
+console.log('Telegram Bot is running successfully...');
