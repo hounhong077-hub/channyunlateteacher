@@ -8,6 +8,7 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
+            /* ប្រើប្រាស់ Font Khmer OS Content */
             font-family: 'Khmer OS Content', 'Battambang', 'Segoe UI', Tahoma, sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             color: #333; display: flex; justify-content: center; align-items: center;
@@ -100,12 +101,17 @@
             let status = document.getElementById("status");
             let btn = document.getElementById("locBtn");
 
-            if (!navigator.geolocation) {
-                status.innerHTML = "❌ Browser របស់អ្នកមិនគាំទ្រការចាប់យកទីតាំងទេ។";
+            if (!base64Image) {
+                status.innerHTML = "⚠️ សូមថតរូបភាព ឬជ្រើសរើសរូបភាពជាមុនសិន!";
                 return;
             }
 
-            status.innerHTML = "⏳ កំពុងផ្ទៀងផ្ទាត់ និងរៀបចំទិន្នន័យ...";
+            if (!navigator.geolocation) {
+                status.innerHTML = "❌ Browser មិនគាំទ្រការចាប់យកទីតាំងទេ។";
+                return;
+            }
+
+            status.innerHTML = "⏳ កំពុងផ្ទៀងផ្ទាត់ទីតាំង...";
             btn.disabled = true;
             btn.style.opacity = "0.7";
 
@@ -113,65 +119,55 @@
                 async (position) => {
                     let lat = position.coords.latitude;
                     let lon = position.coords.longitude;
+                    
+                    // បង្កើត Google Maps URL
+                    let mapUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+
+                    let tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : { id: "unknown", first_name: "WebUser" };
+                    let fullName = `${tgUser.first_name} ${tgUser.last_name || ''}`.trim();
+                    let username = tgUser.username ? `@${tgUser.username}` : 'គ្មាន';
+
+                    status.innerHTML = "⏳ កំពុងរក្សាទុក និង Upload រូបភាព...";
+
+                    // ដាក់ Link Google Apps Script របស់អ្នកនៅទីនេះ
+                    const scriptURL = 'ដាក់_Link_Apps_Script_នៅទីនេះ'; 
                     let imageUrl = "គ្មានរូបភាព";
 
-                    // ១. បើមានរូបភាព សូម Upload ទៅ Catbox ដើម្បីយក Link
-                    if (base64Image) {
-                        status.innerHTML = "⏳ កំពុង Upload រូបភាព...";
-                        try {
-                            const res = await fetch(base64Image);
-                            const blob = await res.blob();
-                            let formData = new FormData();
-                            formData.append('reqtype', 'fileupload');
-                            formData.append('fileToUpload', blob, 'photo.jpg');
-                            
-                            const uploadRes = await fetch('https://catbox.moe/user/api.php', {
-                                method: 'POST',
-                                body: formData
-                            });
-                            imageUrl = await uploadRes.text(); 
-                        } catch (err) {
-                            console.error("Upload failed", err);
-                            imageUrl = "រូបភាពដាក់មិនចូល";
+                    try {
+                        const response = await fetch(scriptURL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({
+                                userId: tgUser.id,
+                                fullName: fullName,
+                                username: username,
+                                latitude: lat,
+                                longitude: lon,
+                                mapUrl: mapUrl,
+                                imageBase64: base64Image
+                            })
+                        });
+                        const result = await response.json();
+                        
+                        if (result.imageUrl) {
+                            imageUrl = result.imageUrl;
                         }
+                    } catch (error) {
+                        console.log("Error: ", error);
                     }
 
-                    // ២. ផ្ញើទៅ Google Sheets មុន (ដើម្បីរក្សាទុកទិន្នន័យ)
-                    status.innerHTML = "⏳ កំពុងរក្សាទុកទិន្នន័យ...";
-                    const scriptURL = 'https://script.google.com/macros/s/AKfycbwTEwooafX8lOY4YKNDAfMG7TxLz_eWV9XBrnMq5n5lt8VbDzh3j7x6sAeUL-fabvAM/exec';
-                    let tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : { id: "unknown", first_name: "WebUser" };
-                    
-                    const sheetPayload = {
-                        userId: tgUser.id,
-                        fullName: `${tgUser.first_name} ${tgUser.last_name || ''}`,
-                        username: tgUser.username ? `@${tgUser.username}` : 'គ្មាន',
+                    // បញ្ជូនទៅ Bot ដើម្បីផ្ញើទៅក្រុម
+                    tg.sendData(JSON.stringify({
                         latitude: lat,
                         longitude: lon,
-                        mapsUrl: `https://www.google.com/maps?q=${lat},${lon}`,
-                        imageUrl: imageUrl
-                    };
-
-                    try {
-                        await fetch(scriptURL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(sheetPayload)
-                        });
-                    } catch (err) {
-                        console.log("Sheets error", err);
-                    }
-
-                    // ៣. បញ្ជូនទិន្នន័យតូចមួយទៅ Bot (ប្រាប់ថាបានបញ្ចប់)
-                    // យើងមិនបញ្ជូនរូបភាពតាមនេះទេ ព្រោះវាធំពេក យើងបញ្ជូនតែព័ត៌មានបញ្ជាក់
-                    tg.sendData(JSON.stringify({ 
-                        status: "success",
-                        lat: lat,
-                        lon: lon
+                        mapUrl: mapUrl,
+                        imageUrl: imageUrl,
+                        fullName: fullName,
+                        username: username,
+                        userId: tgUser.id
                     }));
 
-                    status.innerHTML = `✅ ផ្ញើរបាយការណ៍ជោគជ័យ!`;
-                    // មិនត្រូវហៅ tg.close() ទេ ព្រោះ tg.sendData() បិទវាដោយខ្លួនឯងហើយ
+                    status.innerHTML = `✅ ផ្ញើជោគជ័យ!`;
                 },
                 (error) => {
                     btn.disabled = false;
@@ -182,6 +178,5 @@
             );
         }
     </script>
-
 </body>
 </html>
