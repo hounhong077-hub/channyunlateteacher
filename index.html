@@ -8,7 +8,6 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            /* ប្រើប្រាស់ Font Khmer OS Content */
             font-family: 'Khmer OS Content', 'Battambang', 'Segoe UI', Tahoma, sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             color: #333; display: flex; justify-content: center; align-items: center;
@@ -39,9 +38,8 @@
     </style>
 </head>
 <body>
-
     <div class="card">
-        <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjR9cK7_BjbUQ4THtiR6iLjRdc3TN7o8kTPD7k91b70ixGvhTAdEYFVOnoN1TlSB2LZEX_PNoBOKDOyYtg94vVlATxh7jpWk6ngIY45Ym4S7RzwvnrEyWDDeGX5DkDqfIDCqmXcOEqjZ0x-9xaWyLZ3XOGWeb-I7mc7s93BDsynlqGNuEBRVY0zfg6akWg/s1111/CYIS%20Png.png" alt="សាលាអន្តរជាតិ ចាន់ យុន" class="school-logo">
+        <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjR9cK7_BjbUQ4THtiR6iLjRdc3TN7o8kTPD7k91b70ixGvhTAdEYFVOnoN1TlSB2LZEX_PNoBOKDOyYtg94vVlATxh7jpWk6ngIY45Ym4S7RzwvnrEyWDDeGX5DkDqfIDCqmXcOEqjZ0x-9xaWyLZ3XOGWeb-I7mc7s93BDsynlqGNuEBRVY0zfg6akWg/s1111/CYIS%20Png.png" alt="CYIS" class="school-logo">
         
         <h2>ការស្នើសុំមកធ្វើការយឺត</h2>
         <p>រូបថតនិងព័ត៌មានអំពីការមកយឺត</p>
@@ -59,7 +57,6 @@
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
-
         let base64Image = "";
 
         function previewImage(event) {
@@ -105,7 +102,6 @@
                 status.innerHTML = "⚠️ សូមថតរូបភាព ឬជ្រើសរើសរូបភាពជាមុនសិន!";
                 return;
             }
-
             if (!navigator.geolocation) {
                 status.innerHTML = "❌ Browser មិនគាំទ្រការចាប់យកទីតាំងទេ។";
                 return;
@@ -119,22 +115,18 @@
                 async (position) => {
                     let lat = position.coords.latitude;
                     let lon = position.coords.longitude;
-                    
-                    // បង្កើត Google Maps URL
                     let mapUrl = `https://www.google.com/maps?q=${lat},${lon}`;
-
                     let tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : { id: "unknown", first_name: "WebUser" };
                     let fullName = `${tgUser.first_name} ${tgUser.last_name || ''}`.trim();
                     let username = tgUser.username ? `@${tgUser.username}` : 'គ្មាន';
 
-                    status.innerHTML = "⏳ កំពុងរក្សាទុក និង Upload រូបភាព...";
+                    status.innerHTML = "⏳ កំពុងផ្ញើទៅកាន់ក្រុម...";
 
-                    // ដាក់ Link Google Apps Script របស់អ្នកនៅទីនេះ
-                    const scriptURL = 'https://script.google.com/macros/s/AKfycby3IlkPMVN3pLwx41gch8A-ISGk4vvr7ZHD5LrUuw_tOSCphkmI9t6PKEbfMgoscgr4/exec'; 
-                    let imageUrl = "គ្មានរូបភាព";
+                    // សូមដាក់ Link Google Apps Script របស់អ្នកនៅទីនេះ (ចម្លងពីជំហានទី២)
+                    const scriptURL = 'ដាក់_Link_Apps_Script_នៅទីនេះ'; 
 
                     try {
-                        const response = await fetch(scriptURL, {
+                        await fetch(scriptURL, {
                             method: 'POST',
                             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                             body: JSON.stringify({
@@ -147,27 +139,14 @@
                                 imageBase64: base64Image
                             })
                         });
-                        const result = await response.json();
                         
-                        if (result.imageUrl) {
-                            imageUrl = result.imageUrl;
-                        }
+                        status.innerHTML = `✅ ផ្ញើជោគជ័យ!`;
+                        setTimeout(() => { tg.close(); }, 1500); // បិទ Web App ក្រោយ ១.៥ វិនាទី
                     } catch (error) {
-                        console.log("Error: ", error);
+                        status.innerHTML = "❌ មានបញ្ហាក្នុងការផ្ញើ។ សូមព្យាយាមម្តងទៀត។";
+                        btn.disabled = false;
+                        btn.style.opacity = "1";
                     }
-
-                    // បញ្ជូនទៅ Bot ដើម្បីផ្ញើទៅក្រុម
-                    tg.sendData(JSON.stringify({
-                        latitude: lat,
-                        longitude: lon,
-                        mapUrl: mapUrl,
-                        imageUrl: imageUrl,
-                        fullName: fullName,
-                        username: username,
-                        userId: tgUser.id
-                    }));
-
-                    status.innerHTML = `✅ ផ្ញើជោគជ័យ!`;
                 },
                 (error) => {
                     btn.disabled = false;
