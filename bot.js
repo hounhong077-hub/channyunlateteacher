@@ -1,14 +1,21 @@
 const { Telegraf } = require('telegraf');
 
-// សូមដាក់ Bot Token និង Chat ID នៅទីនេះ
-// ដើម្បីសុវត្ថិភាព គួរប្រើ process.env.BOT_TOKEN នៅពេលដាក់ឱ្យដំណើរការពិតប្រាកដ
 const botToken = process.env.BOT_TOKEN || '8760309681:AAFmRRMqDFzl4mA_oM5s_oEI5e5HcK458WU';
 const bot = new Telegraf(botToken);
-
-// ID ក្រុម ឬ Admin ដែលត្រូវទទួលរបាយការណ៍
 const adminChatId = '-5514831424'; 
+const webAppUrl = 'https://your-domain.com/index.html'; // សូមប្តូរទៅ URL ពិតរបស់អ្នក
 
-// ពាក្យបញ្ជា /checkin សម្រាប់បើក Web App
+// 1. កំណត់ Menu ពាក្យបញ្ជា (បង្ហាញប្រអប់ / នៅពេលវាយ)
+bot.telegram.setMyCommands([
+    { command: 'checkin', description: 'សុំមកយឺត (ផ្ញើទីតាំង និងរូបថត)' },
+    { command: 'start', description: 'ចាប់ផ្តើមប្រើប្រាស់ Bot' }
+]).then(() => {
+    console.log('Command menu has been set successfully.');
+}).catch((err) => {
+    console.error('Error setting commands:', err);
+});
+
+// 2. ពាក្យបញ្ជា /checkin សម្រាប់បើក Web App
 bot.command('checkin', (ctx) => {
     const userName = ctx.from.first_name;
     
@@ -19,14 +26,38 @@ bot.command('checkin', (ctx) => {
                 inline_keyboard: [
                     [
                         { 
-                            text: '📝 ការស្នើសុំមកធ្វើការយឺត', 
-                            web_app: { url: 'https://your-domain.com/index.html' } // សូមប្តូរទៅ URL ពិតរបស់អ្នក
+                            text: '📝 សុំមកយឺត', 
+                            web_app: { url: webAppUrl } 
                         }
                     ]
                 ]
             }
         }
     );
+});
+
+// 3. ផ្ញើសារស្វាគមន៍នៅពេល Bot ត្រូវបាន Add ចូលក្រុម
+bot.on('new_chat_members', (ctx) => {
+    const botId = ctx.botInfo.id;
+    const newMembers = ctx.message.new_chat_members;
+    
+    // ពិនិត្យមើលថាតើអ្នកដែលទើបចូលថ្មីនោះ គឺជា Bot នេះឬអត់
+    const botWasAdded = newMembers.some(member => member.id === botId);
+
+    if (botWasAdded) {
+        ctx.reply(
+            `សួស្តីបងប្អូនទាំងអស់គ្នា! 👋\n\n` +
+            `ខ្ញុំគឺជា Bot សម្រាប់ជួយសម្រួលក្នុងការស្នើសុំមកធ្វើការយឺត។\n` +
+            `សូមវាយពាក្យ /checkin ឬចុចប៊ូតុងខាងក្រោមដើម្បីចាប់ផ្តើម៖`,
+            {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '📝 សុំមកយឺត', web_app: { url: webAppUrl } }]
+                    ]
+                }
+            }
+        );
+    }
 });
 
 // ទទួលទិន្នន័យពី Web App (ប្រសិនបើអ្នកប្រើ tg.sendData ក្នុង HTML)
@@ -43,7 +74,6 @@ bot.on('web_app_data', async (ctx) => {
 
         const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
 
-        // បើមានរូបភាពថតផ្ញើមកជាមួយ
         if (imageBase64 && imageBase64.startsWith('data:image')) {
             const base64Data = imageBase64.replace(/^data:image\/jpeg;base64,/, "");
             const imageBuffer = Buffer.from(base64Data, 'base64');
@@ -57,7 +87,6 @@ bot.on('web_app_data', async (ctx) => {
                         parse_mode: 'Markdown'
             });
         } else {
-            // ករណីគ្មានរូបភាព
             await bot.telegram.sendMessage(adminChatId, 
                 `📝 **របាយការណ៍មកធ្វើការយឺត (គ្មានរូបភាព):**\n` +
                 `- ឈ្មោះ: ${fullName} (${username})\n` +
