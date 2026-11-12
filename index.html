@@ -5,36 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CYIS - Verify Current Location</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Leaflet CSS សម្រាប់បង្ហាញផែនទី -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Battambang', 'Segoe UI', Tahoma, sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             color: #333; display: flex; justify-content: center; align-items: center;
-            min-height: 100vh; padding: 20px;
+            min-height: 100vh; padding: 15px;
         }
         .card {
-            background: #ffffff; padding: 30px 20px; border-radius: 16px;
+            background: #ffffff; padding: 20px; border-radius: 16px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); width: 100%; max-width: 380px; text-align: center;
         }
-        .icon { font-size: 45px; margin-bottom: 12px; }
-        h2 { font-size: 20px; color: #1a1a1a; margin-bottom: 8px; }
-        p { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.5; }
-        .upload-box { margin-bottom: 18px; text-align: left; }
-        label { font-size: 13px; font-weight: 600; color: #444; display: block; margin-bottom: 6px; }
+        .icon { font-size: 35px; margin-bottom: 8px; }
+        h2 { font-size: 18px; color: #1a1a1a; margin-bottom: 5px; }
+        p { font-size: 12px; color: #666; margin-bottom: 12px; line-height: 1.4; }
+        
+        /* រចនាប័ទ្មប្រអប់ផែនទី */
+        #map {
+            width: 100%;
+            height: 160px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #ddd;
+            display: none;
+        }
+
+        .upload-box { margin-bottom: 12px; text-align: left; }
+        label { font-size: 12px; font-weight: 600; color: #444; display: block; margin-bottom: 4px; }
         input[type="file"] {
-            width: 100%; padding: 10px; font-size: 13px; border: 1px dashed #2481cc;
+            width: 100%; padding: 8px; font-size: 12px; border: 1px dashed #2481cc;
             border-radius: 8px; background: #f8fbff; cursor: pointer;
         }
-        #preview { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-top: 10px; display: none; }
+        #preview { width: 100%; max-height: 120px; object-fit: cover; border-radius: 8px; margin-top: 8px; display: none; }
         button {
-            background-color: #2481cc; color: white; border: none; padding: 14px 20px;
-            font-size: 16px; font-weight: 600; border-radius: 10px; cursor: pointer; width: 100%;
+            background-color: #2481cc; color: white; border: none; padding: 12px 20px;
+            font-size: 15px; font-weight: 600; border-radius: 10px; cursor: pointer; width: 100%;
             transition: background 0.3s ease; box-shadow: 0 4px 12px rgba(36, 129, 204, 0.3);
         }
         button:hover { background-color: #1d6fa5; }
         button:disabled { background-color: #ccc; cursor: not-allowed; box-shadow: none; }
-        #status { margin-top: 15px; font-size: 13px; font-weight: 500; min-height: 35px; color: #555; }
+        #status { margin-top: 10px; font-size: 12px; font-weight: 500; min-height: 30px; color: #555; }
     </style>
 </head>
 <body>
@@ -42,8 +55,11 @@
     <div class="card">
         <div class="icon">📍</div>
         <h2>Verify current location</h2>
-        <p>សូមថតរូបភាព ឬជ្រើសរើសរូបភាព រួចចុចប៊ូតុងខាងក្រោមដើម្បីផ្ញើទីតាំងជូន Bot ។</p>
+        <p>ថតរូប និងពិនិត្យទីតាំងដែលបាន Pin មុនពេលផ្ញើ។</p>
         
+        <!-- ប្រអប់បង្ហាញផែនទី និង Pin ទីតាំង -->
+        <div id="map"></div>
+
         <div class="upload-box">
             <label for="imageInput">📸 ថតរូបភាព ឬជ្រើសរើស:</label>
             <input type="file" id="imageInput" accept="image/*" capture="environment" onchange="previewImage(event)">
@@ -54,11 +70,45 @@
         <div id="status"></div>
     </div>
 
+    <!-- Leaflet JS សម្រាប់ដំណើរការផែនទី -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
 
         let base64Image = "";
+        let map, marker;
+
+        // ចាប់យកទីតាំងបឋមភ្លាមពេលបើក Web App ដើម្បីបង្ហាញ Pin บนផែនទី
+        window.onload = function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        let lat = position.coords.latitude;
+                        let lon = position.coords.longitude;
+                        showMap(lat, lon);
+                    },
+                    (error) => { console.log("Waiting for location..."); },
+                    { enableHighAccuracy: true }
+                );
+            }
+        };
+
+        function showMap(lat, lon) {
+            let mapContainer = document.getElementById("map");
+            mapContainer.style.display = "block";
+
+            if (!map) {
+                map = L.map('map').setView([lat, lon], 16);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
+                marker = L.marker([lat, lon]).addTo(map);
+            } else {
+                map.setView([lat, lon], 16);
+                marker.setLatLng([lat, lon]);
+            }
+        }
 
         function previewImage(event) {
             const file = event.target.files[0];
@@ -104,7 +154,7 @@
                 return;
             }
 
-            status.innerHTML = "⏳ កំពុងទាញយកទីតាំង GPS...";
+            status.innerHTML = "⏳ កំពុងផ្ទៀងផ្ទាត់ទីតាំង និងរក្សាទុក...";
             btn.disabled = true;
             btn.style.opacity = "0.7";
 
@@ -115,10 +165,10 @@
                     let lat = position.coords.latitude;
                     let lon = position.coords.longitude;
                     
-                    status.innerHTML = `✅ កំពុងរក្សាទុកក្នុង Google Sheets...`;
-                    
-                    // Google Apps Script Web App URL របស់លោកគ្រូ
-                    const scriptURL = 'https://script.google.com/macros/s/AKfycbzHkjOLqIf_iqZ4T_SMZln7L-LqbUbDHhjFm_KJfaW7s6kctC7gYyAD7rIjR7UCEQ7N/exec';
+                    // បង្ហាញផែនទី និង Pin ឡើងវិញឱ្យចំទីតាំងច្បាស់លាស់
+                    showMap(lat, lon);
+
+                    const scriptURL = 'https://script.google.com/macros/s/AKfycbwws0L_NFAZiz3FbVPM75NTH6lDRCPDEQ9hm3t9tyQaqLh-Gm7uHkiCsAzt_YQuRxzu/exec';
 
                     const payload = {
                         userId: tgUser.id,
@@ -138,7 +188,7 @@
                         body: JSON.stringify(payload)
                     })
                     .then(response => {
-                        status.innerHTML = `✅ Get a successful position!<br><small>Lat: ${lat.toFixed(5)}, Lon: ${lon.toFixed(5)}</small>`;
+                        status.innerHTML = `✅ រក្សាទុកក្នុង Google Sheets ជោគជ័យ!`;
                         setTimeout(() => {
                             tg.close();
                         }, 2000);
